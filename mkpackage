@@ -1,14 +1,38 @@
 #!/bin/bash
 
+PKG_NAME="invalid"
+PKG_VERSION="???"
+
+# $1 error msg
 error() {
 	echo -e "\033[31m$1\033[0m"
 	exit 1
 }
 
+# $1 sh256sum
+# $2 file
+verify() {
+	sha256sum -c <(echo "$1" "$2") > /dev/null && echo -n "OK"
+}
+
+# $1 url
+# $2 dest
+# $3 sha256sum
+download_and_verify() {
+	if [ ! -f "$2" ] || [ ! "$(verify $3 $2)" == "OK" ]
+	then
+		wget "$1" -O "$2"
+		[ "$(verify $3 $2)" == "OK" ]  || exit 1
+	fi
+}
+
 if [ $# -eq 0 ]
 then
-	error "Usage: $0 <recipe file>"
+	error "Usage: $0 <package source folder>"
 fi
+
+tmp_dir=$(mktemp -d -t mkpackage-XXXXXXXX)
+export PREFIX="${tmp_dir}"
 
 outdir="."
 if [ $# -eq 2 ]
@@ -16,11 +40,15 @@ then
 	outdir="$2"
 fi
 
-source "$1"
+package_dir="${1%/}"
+package_recipe="$(basename $package_dir).recipe"
+source "${package_dir}/${package_recipe}"
+
 echo "Building ${PKG_NAME} v${PKG_VERSION}"
 
 archive_name="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-tmp_dir=$(mktemp -d -t mkpackage-XXXXXXXX)
+
+cp -r "${package_dir}"/* "${tmp_dir}"
 
 pushd "$tmp_dir"
 

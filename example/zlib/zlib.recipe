@@ -1,0 +1,29 @@
+PKG_NAME="zlib"
+PKG_VERSION=1.2.12
+PKG_DESC="zlib is designed to be a free, general-purpose, legally unencumbered -- that is, not covered by any patents -- lossless data-compression library for use on virtually any computer hardware and operating system."
+PKG_LICENSE="Zlib"
+PKG_SHA256="7db46b8d7726232a621befaab4a1c870f00a90805511c0e0090441dac57def18"
+PKG_ARCHIVE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_URL="https://zlib.net/${PKG_ARCHIVE}"
+
+
+PKG_FILES=(
+	"lib/libz.a"
+	"share/man/man3/zlib.3"
+	"lib/pkgconfig/zlib.pc"
+	"include/zlib.h"
+	"include/zconf.h"
+)
+
+build() {
+	download_and_verify "${PKG_URL}" "${PKG_ARCHIVE}" "${PKG_SHA256}"
+	tar -xf ${PKG_ARCHIVE}
+
+	pushd "${PKG_NAME}-${PKG_VERSION}"
+
+	./configure --prefix=/  --static
+	make
+	make DESTDIR="$PREFIX" install
+
+	popd
+}
