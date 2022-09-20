@@ -1,57 +1,89 @@
 #!/bin/bash
+set -euo pipefail
 
-PKG_NAME="invalid"
-PKG_VERSION="???"
+LC_ALL=C
+LANG=C
 
-# $1 error msg
+# ============================================================================
+#  functions
+# ============================================================================
+#  error(msg) - display error message and exit
+# ----------------------------------------------------------------------------
 error() {
 	echo -e "\033[31m$1\033[0m"
 	exit 1
 }
 
-# $1 sh256sum
-# $2 file
+# ----------------------------------------------------------------------------
+#  finish() - remove temp dir before exit
+# ----------------------------------------------------------------------------
+finish() {
+	ret=$?
+
+	if [[ -v MKPKG_TMP_DIR ]]
+	then
+		echo "Cleanup: ${MKPKG_TMP_DIR}"
+		rm -r "${MKPKG_TMP_DIR}"
+	fi
+
+	exit $ret
+}
+
+# ----------------------------------------------------------------------------
+#  verify(sha256sum, file) - check if "sha256sum" match
+# ----------------------------------------------------------------------------
 verify() {
 	sha256sum -c <(echo "$1" "$2") > /dev/null && echo -n "OK"
 }
 
-# $1 url
-# $2 dest
-# $3 sha256sum
+# ----------------------------------------------------------------------------
+#  download_and_verify(url, dest, sha256sum) - download file from "url" and 
+#  save it to "dest" then check if "sha256sum" is correct otherwhise exit
+# ----------------------------------------------------------------------------
 download_and_verify() {
 	if [ ! -f "$2" ] || [ ! "$(verify $3 $2)" == "OK" ]
 	then
 		wget "$1" -O "$2"
-		[ "$(verify $3 $2)" == "OK" ]  || exit 1
+		[ "$(verify $3 $2)" == "OK" ]  || error "sha256sum missmatch"
 	fi
 }
 
+# ============================================================================
+#  Global variables
+# ============================================================================
+MKPKG_TMP_DIR="$(mktemp -d -t mkpackage-XXXXXXXX)"
+MKPKG_OUT_DIR="."
+trap finish INT EXIT
+
+export PREFIX="${MKPKG_TMP_DIR}"
+
+# ============================================================================
+#  Entry
+# ============================================================================
 if [ $# -eq 0 ]
 then
 	error "Usage: $0 <package source folder>"
 fi
 
-tmp_dir=$(mktemp -d -t mkpackage-XXXXXXXX)
-export PREFIX="${tmp_dir}"
-
-outdir="."
 if [ $# -eq 2 ]
 then
-	outdir="$2"
+	MKPKG_OUT_DIR="$2"
 fi
 
 package_dir="${1%/}"
 package_recipe="$(basename $package_dir).recipe"
+
 source "${package_dir}/${package_recipe}"
 
 echo "Building ${PKG_NAME} v${PKG_VERSION}"
 
 archive_name="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 
-cp -r "${package_dir}"/* "${tmp_dir}"
+cp -r "${package_dir}"/* "${MKPKG_TMP_DIR}"
 
-pushd "$tmp_dir"
+pushd "${MKPKG_TMP_DIR}"
 
+# build is defined in recipe file
 build
 
 echo "NAME=$PKG_NAME" > META
@@ -63,5 +95,5 @@ tar -cvzf "${archive_name}" ${PKG_FILES[@]} META
 
 popd
 
-mv "${tmp_dir}/${archive_name}" "${outdir}/${archive_name}"
+mv "${MKPKG_TMP_DIR}/${archive_name}" "${MKPKG_OUT_DIR}/${archive_name}"
 
