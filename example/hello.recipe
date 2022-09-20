@@ -1,0 +1,16 @@
+PKG_NAME="hello"
+PKG_VERSION=1.0
+PKG_DESC="Print Hello"
+PKG_LICENSE="MIT"
+
+PKG_FILES=(
+	"bin/hello"
+	"hello.c"
+)
+
+build() {
+	echo -e "#include <stdio.h>\nint main(void) { printf(\"Hello\"); return (0); }" > hello.c
+	mkdir bin
+	gcc -o bin/hello hello.c 
+}
+

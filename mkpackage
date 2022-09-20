@@ -1,0 +1,39 @@
+#!/bin/bash
+
+error() {
+	echo -e "\033[31m$1\033[0m"
+	exit 1
+}
+
+if [ $# -eq 0 ]
+then
+	error "Usage: $0 <recipe file>"
+fi
+
+outdir="."
+if [ $# -eq 2 ]
+then
+	outdir="$2"
+fi
+
+source "$1"
+echo "Building ${PKG_NAME} v${PKG_VERSION}"
+
+archive_name="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+tmp_dir=$(mktemp -d -t mkpackage-XXXXXXXX)
+
+pushd "$tmp_dir"
+
+build
+
+echo "NAME=$PKG_NAME" > META
+echo "VERSION=$PKG_VERSION" >> META
+echo "LICENSE=$PKG_LICENSE" >> META
+echo "DESCRIPTION=$PKG_DESC" >> META
+
+tar -cvzf "${archive_name}" ${PKG_FILES[@]} META
+
+popd
+
+mv "${tmp_dir}/${archive_name}" "${outdir}/${archive_name}"
+
