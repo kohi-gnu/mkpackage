@@ -55,11 +55,21 @@ MKPKG_TMP_DIR="$(mktemp -d -t mkpackage-XXXXXXXX)"
 MKPKG_OUT_DIR="."
 trap finish INT EXIT
 
+MKPKG_CONF_FILES=(
+	"/etc/mkpackage.conf"
+	"mkpackage.conf"
+)
+
 export PREFIX="${MKPKG_TMP_DIR}"
 
 # ============================================================================
 #  Entry
 # ============================================================================
+for conf in "${MKPKG_CONF_FILES[@]}"
+do
+	[[ -f "${conf}" ]] && source "${conf}"
+done
+
 if [ $# -eq 0 ]
 then
 	error "Usage: $0 <package source folder>"

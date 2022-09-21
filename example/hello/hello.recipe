@@ -9,6 +9,6 @@ PKG_FILES=(
 
 build() {
 	mkdir bin
-	gcc -o bin/hello hello.c 
+	$CC -o bin/hello hello.c $CFLAGS $LDFLAGS
 }
 
